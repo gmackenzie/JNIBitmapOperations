@@ -1,0 +1,19 @@
+repositories {    
+  flatDir{
+    dirs 'aar'
+  }
+}
+
+dependencies {
+   compile(name:'jnibitmapoperations', ext:'aar')
+}
+
+android {
+  packagingOptions {
+    exclude 'META-INF/LICENSE.txt'
+    exclude 'META-INF/LICENSE'
+    exclude 'META-INF/NOTICE.txt'
+    exclude 'META-INF/NOTICE'
+    exclude 'META-INF/DEPENDENCIES'
+  }
+}

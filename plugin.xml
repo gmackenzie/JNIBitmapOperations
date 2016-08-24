@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
+        id="uk.co.duckmonkey.cordova.jni-bitmap-operations"
+        version="0.0.1">
+
+  <name>JNI Bitmap Operations Plugin</name>
+  <description></description>
+
+  <engines>
+    <engine name="cordova" version=">=4.1.1"/>
+  </engines>
+
+  <js-module src="www/jnibitmapoperations.js" name="JNIBitmapOperations">
+    <clobbers target="plugins.jnibitmapoperations" />
+  </js-module>
+
+  <platform name="android">    
+	<config-file target="config.xml" parent="/*">
+	  <feature name="JNIBitmapOperations">	    
+        <param name="android-package" value="uk.co.duckmonkey.cordova.jnibitmapoperations.JNIBitmapOperations" />
+      </feature>	
+	</config-file>	
+    
+	<framework src="src/android/gradle/jnibitmapoperations.gradle" custom="true" type="gradleReference" /> 
+	<resource-file src="aar/jnibitmapoperations-debug.aar" target="aar/jnibitmapoperations.aar" />	
+	<source-file src="src/android/java/JNIBitmapOperations.java" target-dir="src/uk/co/duckmonkey/cordova/jnibitmapoperations/"/>
+	
+  </platform>
+
+</plugin>

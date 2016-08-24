@@ -1,0 +1,2 @@
+# JNI Bitmap Operations plugin
+
