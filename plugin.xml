@@ -21,6 +21,7 @@
       </feature>	
 	</config-file>	
     
+	<framework src="org.lucee:commons-io:2.4.0" />
 	<framework src="src/android/gradle/jnibitmapoperations.gradle" custom="true" type="gradleReference" /> 
 	<resource-file src="aar/jnibitmapoperations-debug.aar" target="aar/jnibitmapoperations.aar" />	
 	<source-file src="src/android/java/JNIBitmapOperations.java" target-dir="src/uk/co/duckmonkey/cordova/jnibitmapoperations/"/>
