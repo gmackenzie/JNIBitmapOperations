@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class JNIBitmapOperations extends CordovaPlugin {
@@ -115,12 +116,18 @@ public class JNIBitmapOperations extends CordovaPlugin {
                     file = getAsset(url);
                 } else if (url.startsWith("http://") || url.startsWith("https://")) {
                     file = getHttp(url);
+                } else if (url.startsWith("cdvfile://")) {
+                    file = getCdvFile(url);
                 }
 
-                String action = uri.getQueryParameter("action");
-                if (action != null) {
+                List<String> actions = uri.getQueryParameters("action");
+                for(String action : actions) {
                     if (action.equals("scale")) {
                         file = doScale(uri, file);
+                    } else if (action.equals("rotate")) {
+                        file = doRotate(uri, file);
+                    } else if (action.equals("crop")) {
+                        file = doCrop(uri, file);
                     }
                 }
             } catch (MissingParameterException e) {
@@ -137,6 +144,8 @@ public class JNIBitmapOperations extends CordovaPlugin {
 
         return new CordovaResourceApi.OpenForReadResult(uri, is, type, 0, null );
     }
+
+
 
     private File getAsset(String path) throws IOException, MissingParameterException {
         AssetManager assetManager = cordova.getActivity().getAssets();
@@ -162,11 +171,7 @@ public class JNIBitmapOperations extends CordovaPlugin {
         return resultFile;
     }
 
-    private File doCdvFile(Uri uri, File jniBitmapsFolder) throws MissingParameterException, IOException {
-        checkParameter(uri, new String[]{"url"});
-
-        String cdvfile = uri.getQueryParameter("cdvfile");
-
+    private File getCdvFile(String cdvfile) throws MissingParameterException, IOException {
         CordovaResourceApi resourceApi = webView.getResourceApi();
         Uri fileURL = resourceApi.remapUri(Uri.parse(cdvfile));
         File f = new File(fileURL.getPath());
@@ -188,6 +193,17 @@ public class JNIBitmapOperations extends CordovaPlugin {
         return downloadedFile;
     }
 
+    private File doCrop(Uri uri, File file) throws MissingParameterException, IOException {
+        checkParameter(uri, new String[]{"top", "left", "right", "bottom"});
+
+        int left = Integer.parseInt(uri.getQueryParameter("left"));
+        int top = Integer.parseInt(uri.getQueryParameter("top"));
+        int right = Integer.parseInt(uri.getQueryParameter("right"));
+        int bottom = Integer.parseInt(uri.getQueryParameter("bottom"));
+
+        return createCroppedBitmap(file, left, top, right, bottom);
+    }
+
     private File doScale(Uri uri, File file) throws MissingParameterException, IOException {
         checkParameter(uri, new String[]{"width", "height"});
 
@@ -197,11 +213,59 @@ public class JNIBitmapOperations extends CordovaPlugin {
         return createScaledBitmap(file, width, height, aspect);
     }
 
+    private File doRotate(Uri uri, File file) throws MissingParameterException, IOException {
+        checkParameter(uri, new String[]{"degrees"});
+        int degrees = Integer.parseInt(uri.getQueryParameter("degrees"));
+        return createRotatedBitmap(file, degrees);
+    }
+
     private void checkParameter(Uri uri, String[] parameters) throws MissingParameterException {
         for( String param : parameters ) {
             if (!(uri.getQueryParameterNames().contains(param)))
                 throw new MissingParameterException(param);
         }
+    }
+
+    private File createCroppedBitmap(File f, int left, int top, int right, int bottom) throws IOException {
+        FileInputStream fis = new FileInputStream(f);
+        Bitmap b = BitmapFactory.decodeStream(fis);
+
+        bitmapHolder.storeBitmap(b);
+        bitmapHolder.cropBitmap(left, top, right, bottom);
+        b = bitmapHolder.getBitmapAndFree();
+
+        File folder = f.getParentFile();
+        File newFile = File.createTempFile(f.getName(), ".png", folder);
+        FileOutputStream fos = new FileOutputStream(newFile);
+        b.compress(Bitmap.CompressFormat.PNG, 100, fos);
+        fos.flush();
+        fos.close();
+        return newFile;
+    }
+
+    private File createRotatedBitmap(File f, int degrees) throws IOException {
+        FileInputStream fis = new FileInputStream(f);
+        Bitmap b = BitmapFactory.decodeStream(fis);
+
+        synchronized (bitmapHolder) {
+            bitmapHolder.storeBitmap(b);
+            switch(degrees) {
+                case 90:
+                    bitmapHolder.rotateBitmapCw90(); break;
+                case 180:
+                    bitmapHolder.rotateBitmap180(); break;
+                case 270:
+                    bitmapHolder.rotateBitmapCcw90(); break;
+            }
+            b = bitmapHolder.getBitmapAndFree();
+        }
+        File folder = f.getParentFile();
+        File newFile = File.createTempFile(f.getName(), ".png", folder);
+        FileOutputStream fos = new FileOutputStream(newFile);
+        b.compress(Bitmap.CompressFormat.PNG, 100, fos);
+        fos.flush();
+        fos.close();
+        return newFile;
     }
 
     private File createScaledBitmap(File f, int width, int height, boolean aspect) throws IOException {
@@ -223,7 +287,7 @@ public class JNIBitmapOperations extends CordovaPlugin {
             b = bitmapHolder.getBitmapAndFree();
         }
         File folder = f.getParentFile();
-        File newFile = new File(folder, f.getName() + "sized");
+        File newFile = File.createTempFile(f.getName(), ".png", folder);
         FileOutputStream fos = new FileOutputStream(newFile);
         b.compress(Bitmap.CompressFormat.PNG, 100, fos);
         fos.flush();
